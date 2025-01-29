@@ -2,13 +2,9 @@ import DefaultLayout from "@/layouts/default";
 import CodeCell from "@/components/notebook/CodeCell";
 import MarkdownCell from "@/components/notebook/MarkdownCell";
 
-interface NotebookPageProps {
-  files: { name: string; active: boolean }[];
-}
-
-export default function NotebookPage({ files }: NotebookPageProps) {
+export default function NotebookPage() {
   return (
-    <DefaultLayout files={files}>
+    <DefaultLayout>
       <div className="space-y-4">
         <CodeCell cellNumber={1} code="print('Hello, Jupyter!')" />
         <MarkdownCell content="<h1>This is a Markdown Cell</h1><p>You can write rich text here.</p>" />

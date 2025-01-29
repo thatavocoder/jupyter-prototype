@@ -1,4 +1,4 @@
-import NotebookPage from "./notebook";
+import NotebookPage from "../components/index-page/notebook";
 
 export default function IndexPage() {
   const files = [

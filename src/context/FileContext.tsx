@@ -4,18 +4,20 @@ import {
   ReactNode,
   useState,
   useEffect,
+  Dispatch,
+  SetStateAction,
 } from "react";
 
-interface File {
+interface CustomFile {
   name: string;
   active?: boolean;
 }
 
 interface FileContextType {
-  allFiles: File[]; // All files in the file tree
-  openFiles: File[]; // Currently open tabs
-  setAllFiles: (files: File[]) => void;
-  addFile: (file: File) => void;
+  allFiles: CustomFile[]; // All files in the file tree
+  openFiles: CustomFile[]; // Currently open tabs
+  setAllFiles: Dispatch<SetStateAction<CustomFile[]>>;
+  addFile: (file: CustomFile) => void;
   removeFile: (fileName: string) => void;
   openFile: (fileName: string) => void;
   closeFile: (fileName: string) => void;
@@ -36,13 +38,13 @@ const setLocalStorageItem = <T,>(key: string, value: T) => {
 };
 
 export function FileProvider({ children }: { children: ReactNode }) {
-  const [allFiles, setAllFiles] = useState<File[]>(
+  const [allFiles, setAllFiles] = useState<CustomFile[]>(
     getLocalStorageItem("allFiles", [
       { name: "notebook.ipynb" },
       { name: "data.csv" },
     ]),
   );
-  const [openFiles, setOpenFiles] = useState<File[]>(
+  const [openFiles, setOpenFiles] = useState<CustomFile[]>(
     getLocalStorageItem("openFiles", [
       { name: "notebook.ipynb", active: true },
     ]),
@@ -58,7 +60,7 @@ export function FileProvider({ children }: { children: ReactNode }) {
     setLocalStorageItem("openFiles", openFiles);
   }, [openFiles]);
 
-  const addFile = (file: File) => {
+  const addFile = (file: CustomFile) => {
     setAllFiles((prev) => [...prev, file]);
   };
 
@@ -100,6 +102,11 @@ export function FileProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const removeFile = (fileName: string) => {
+    setAllFiles((prev) => prev.filter((file) => file.name !== fileName));
+    closeFile(fileName);
+  };
+
   const setActiveFile = (fileName: string) => {
     setOpenFiles((prev) =>
       prev.map((file) => ({
@@ -116,7 +123,7 @@ export function FileProvider({ children }: { children: ReactNode }) {
         openFiles,
         setAllFiles,
         addFile,
-        removeFile: closeFile,
+        removeFile,
         openFile,
         closeFile,
         setActiveFile,

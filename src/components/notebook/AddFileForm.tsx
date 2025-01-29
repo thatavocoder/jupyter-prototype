@@ -33,6 +33,7 @@ export default function AddFileForm({ isOpen, onClose }: AddFileFormProps) {
     try {
       const validated = fileSchema.parse({ name: fileName });
       const newFile = { name: validated.name };
+
       addFile(newFile);
       openFile(validated.name);
       onClose();

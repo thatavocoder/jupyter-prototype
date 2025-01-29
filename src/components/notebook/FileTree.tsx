@@ -2,12 +2,52 @@ import { useState } from "react";
 import { Button } from "@heroui/button";
 
 import AddFileForm from "./AddFileForm";
+import FileContextMenu from "./FileContextMenu";
 
 import { useFiles } from "@/context/FileContext";
 
 export default function FileTree() {
-  const { allFiles, openFiles, openFile } = useFiles();
+  const { allFiles, openFiles, openFile, removeFile, setAllFiles } = useFiles();
   const [isAddFileModalOpen, setIsAddFileModalOpen] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    file: string;
+  } | null>(null);
+
+  const handleContextMenu = (e: React.MouseEvent, fileName: string) => {
+    e.preventDefault();
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      file: fileName,
+    });
+  };
+
+  const handleRename = () => {
+    if (contextMenu) {
+      const newName = prompt("Enter new file name:", contextMenu.file);
+
+      if (newName) {
+        setAllFiles((prev) =>
+          prev.map((file) =>
+            file.name === contextMenu.file ? { ...file, name: newName } : file,
+          ),
+        );
+      }
+      setContextMenu(null);
+    }
+  };
+
+  const handleDelete = () => {
+    if (
+      contextMenu &&
+      window.confirm(`Are you sure you want to delete ${contextMenu.file}?`)
+    ) {
+      removeFile(contextMenu.file);
+      setContextMenu(null);
+    }
+  };
 
   return (
     <div className="p-4">
@@ -32,6 +72,7 @@ export default function FileTree() {
                   : "hover:bg-gray-200 dark:hover:bg-gray-700"
               }`}
               onClick={() => openFile(file.name)}
+              onContextMenu={(e) => handleContextMenu(e, file.name)}
             >
               <span>📄 {file.name}</span>
               {isActive && <span className="ml-2 text-blue-500">●</span>}
@@ -43,6 +84,15 @@ export default function FileTree() {
         isOpen={isAddFileModalOpen}
         onClose={() => setIsAddFileModalOpen(false)}
       />
+      {contextMenu && (
+        <FileContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onRename={handleRename}
+          onDelete={handleDelete}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </div>
   );
 }

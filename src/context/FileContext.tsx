@@ -4,39 +4,17 @@ import {
   ReactNode,
   useState,
   useEffect,
-  Dispatch,
-  SetStateAction,
 } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
-interface CustomFile {
-  name: string;
-  active?: boolean;
-}
-
-interface FileContextType {
-  allFiles: CustomFile[];
-  openFiles: CustomFile[];
-  setAllFiles: Dispatch<SetStateAction<CustomFile[]>>;
-  addFile: (file: CustomFile) => void;
-  removeFile: (fileName: string) => void;
-  openFile: (fileName: string) => void;
-  closeFile: (fileName: string) => void;
-  setActiveFile: (fileName: string) => void;
-  closeAllFiles: () => void;
-}
+import { CustomFile, FileContextType } from "../types/fileTypes";
+import {
+  getLocalStorageItem,
+  setLocalStorageItem,
+} from "../utils/localStorageUtils";
+import { updateFileState, getRemainingFiles } from "../utils/fileOperations";
 
 const FileContext = createContext<FileContextType | null>(null);
-
-const getLocalStorageItem = <T,>(key: string, defaultValue: T): T => {
-  const item = localStorage.getItem(key);
-
-  return item ? JSON.parse(item) : defaultValue;
-};
-
-const setLocalStorageItem = <T,>(key: string, value: T) => {
-  localStorage.setItem(key, JSON.stringify(value));
-};
 
 export function FileProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
@@ -54,17 +32,21 @@ export function FileProvider({ children }: { children: ReactNode }) {
     ]),
   );
 
+  const updateNavigation = (fileName: string) => {
+    setTimeout(() => navigate(`/file/${encodeURIComponent(fileName)}`), 0);
+  };
+
+  const getFileNameFromPath = () => {
+    const path = location.pathname.split("/file/")[1];
+
+    return path ? decodeURIComponent(path) : null;
+  };
+
   useEffect(() => {
-    const fileName = location.pathname.split("/file/")[1];
+    const fileName = getFileNameFromPath();
 
-    if (fileName) {
-      const decodedFileName = decodeURIComponent(fileName);
-
-      if (!openFiles.some((file) => file.name === decodedFileName)) {
-        setTimeout(() => {
-          openFile(decodedFileName);
-        }, 0);
-      }
+    if (fileName && !openFiles.some((file) => file.name === fileName)) {
+      setTimeout(() => openFile(fileName), 0);
     }
   }, []);
 
@@ -82,31 +64,24 @@ export function FileProvider({ children }: { children: ReactNode }) {
 
   const openFile = (fileName: string) => {
     setOpenFiles((prev) => {
-      if (prev.some((file) => file.name === fileName)) {
-        return prev.map((file) => ({
-          ...file,
-          active: file.name === fileName,
-        }));
-      }
+      const isFileOpen = prev.some((file) => file.name === fileName);
+      const updatedFiles = updateFileState(prev, fileName, true);
 
-      return [
-        ...prev.map((file) => ({ ...file, active: false })),
-        { name: fileName, active: true },
-      ];
+      return isFileOpen
+        ? updatedFiles
+        : [...updatedFiles, { name: fileName, active: true }];
     });
-    setTimeout(() => {
-      navigate(`/file/${encodeURIComponent(fileName)}`);
-    }, 0);
+    updateNavigation(fileName);
   };
 
   const closeFile = (fileName: string) => {
     setOpenFiles((prev) => {
-      const remainingFiles = prev.filter((file) => file.name !== fileName);
+      const remainingFiles = getRemainingFiles(prev, fileName);
+      const wasActive = prev.some(
+        (file) => file.name === fileName && file.active,
+      );
 
-      if (
-        prev.some((file) => file.name === fileName && file.active) &&
-        remainingFiles.length > 0
-      ) {
+      if (wasActive && remainingFiles.length > 0) {
         return remainingFiles.map((file, index) => ({
           ...file,
           active: index === remainingFiles.length - 1,
@@ -115,17 +90,14 @@ export function FileProvider({ children }: { children: ReactNode }) {
 
       return remainingFiles;
     });
-    setTimeout(() => {
-      const remainingFiles = openFiles.filter((file) => file.name !== fileName);
 
-      if (remainingFiles.length > 0) {
-        const lastFile = remainingFiles[remainingFiles.length - 1];
+    const remainingFiles = getRemainingFiles(openFiles, fileName);
 
-        navigate(`/file/${encodeURIComponent(lastFile.name)}`);
-      } else {
-        navigate("/");
-      }
-    }, 0);
+    if (remainingFiles.length > 0) {
+      updateNavigation(remainingFiles[remainingFiles.length - 1].name);
+    } else {
+      setTimeout(() => navigate("/"), 0);
+    }
   };
 
   const removeFile = (fileName: string) => {
@@ -140,13 +112,30 @@ export function FileProvider({ children }: { children: ReactNode }) {
         active: file.name === fileName,
       })),
     );
-    setTimeout(() => {
-      navigate(`/file/${encodeURIComponent(fileName)}`);
-    }, 0);
+    updateNavigation(fileName);
   };
 
   const closeAllFiles = () => {
     setOpenFiles([]);
+    setTimeout(() => navigate("/"), 0);
+  };
+
+  const handleRename = (oldName: string, newName: string) => {
+    setAllFiles((prev) =>
+      prev.map((file) =>
+        file.name === oldName ? { ...file, name: newName } : file,
+      ),
+    );
+
+    setOpenFiles((prev) =>
+      prev.map((file) => ({
+        ...file,
+        name: file.name === oldName ? newName : file.name,
+        active: file.name === oldName ? true : false,
+      })),
+    );
+
+    updateNavigation(newName);
   };
 
   return (
@@ -161,6 +150,7 @@ export function FileProvider({ children }: { children: ReactNode }) {
         closeFile,
         setActiveFile,
         closeAllFiles,
+        handleRename,
       }}
     >
       {children}

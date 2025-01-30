@@ -7,7 +7,8 @@ import FileContextMenu from "./FileContextMenu";
 import { useFiles } from "@/context/FileContext";
 
 export default function FileTree() {
-  const { allFiles, openFiles, openFile, removeFile, setAllFiles } = useFiles();
+  const { allFiles, openFiles, openFile, removeFile, handleRename } =
+    useFiles();
   const [isAddFileModalOpen, setIsAddFileModalOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -24,16 +25,12 @@ export default function FileTree() {
     });
   };
 
-  const handleRename = () => {
+  const handleRenameClick = () => {
     if (contextMenu) {
       const newName = prompt("Enter new file name:", contextMenu.file);
 
       if (newName) {
-        setAllFiles((prev) =>
-          prev.map((file) =>
-            file.name === contextMenu.file ? { ...file, name: newName } : file,
-          ),
-        );
+        handleRename(contextMenu.file, newName);
       }
       setContextMenu(null);
     }
@@ -88,7 +85,7 @@ export default function FileTree() {
         <FileContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
-          onRename={handleRename}
+          onRename={handleRenameClick}
           onDelete={handleDelete}
           onClose={() => setContextMenu(null)}
         />

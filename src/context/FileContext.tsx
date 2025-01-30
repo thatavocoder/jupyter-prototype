@@ -7,6 +7,7 @@ import {
   Dispatch,
   SetStateAction,
 } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 interface CustomFile {
   name: string;
@@ -14,19 +15,19 @@ interface CustomFile {
 }
 
 interface FileContextType {
-  allFiles: CustomFile[]; // All files in the file tree
-  openFiles: CustomFile[]; // Currently open tabs
+  allFiles: CustomFile[];
+  openFiles: CustomFile[];
   setAllFiles: Dispatch<SetStateAction<CustomFile[]>>;
   addFile: (file: CustomFile) => void;
   removeFile: (fileName: string) => void;
   openFile: (fileName: string) => void;
   closeFile: (fileName: string) => void;
   setActiveFile: (fileName: string) => void;
+  closeAllFiles: () => void;
 }
 
 const FileContext = createContext<FileContextType | null>(null);
 
-// Helper functions for localStorage
 const getLocalStorageItem = <T,>(key: string, defaultValue: T): T => {
   const item = localStorage.getItem(key);
 
@@ -38,6 +39,9 @@ const setLocalStorageItem = <T,>(key: string, value: T) => {
 };
 
 export function FileProvider({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [allFiles, setAllFiles] = useState<CustomFile[]>(
     getLocalStorageItem("allFiles", [
       { name: "notebook.ipynb" },
@@ -50,12 +54,24 @@ export function FileProvider({ children }: { children: ReactNode }) {
     ]),
   );
 
-  // Save to localStorage whenever allFiles changes
+  useEffect(() => {
+    const fileName = location.pathname.split("/file/")[1];
+
+    if (fileName) {
+      const decodedFileName = decodeURIComponent(fileName);
+
+      if (!openFiles.some((file) => file.name === decodedFileName)) {
+        setTimeout(() => {
+          openFile(decodedFileName);
+        }, 0);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     setLocalStorageItem("allFiles", allFiles);
   }, [allFiles]);
 
-  // Save to localStorage whenever openFiles changes
   useEffect(() => {
     setLocalStorageItem("openFiles", openFiles);
   }, [openFiles]);
@@ -66,7 +82,6 @@ export function FileProvider({ children }: { children: ReactNode }) {
 
   const openFile = (fileName: string) => {
     setOpenFiles((prev) => {
-      // If file is already open, just make it active
       if (prev.some((file) => file.name === fileName)) {
         return prev.map((file) => ({
           ...file,
@@ -74,24 +89,24 @@ export function FileProvider({ children }: { children: ReactNode }) {
         }));
       }
 
-      // If file is not open, add it and make it active
       return [
-        ...prev.map((file) => ({ ...file, active: false })), // Deactivate all other files
+        ...prev.map((file) => ({ ...file, active: false })),
         { name: fileName, active: true },
       ];
     });
+    setTimeout(() => {
+      navigate(`/file/${encodeURIComponent(fileName)}`);
+    }, 0);
   };
 
   const closeFile = (fileName: string) => {
     setOpenFiles((prev) => {
       const remainingFiles = prev.filter((file) => file.name !== fileName);
 
-      // If we closed the active file and there are other files open
       if (
         prev.some((file) => file.name === fileName && file.active) &&
         remainingFiles.length > 0
       ) {
-        // Activate the last file in the list
         return remainingFiles.map((file, index) => ({
           ...file,
           active: index === remainingFiles.length - 1,
@@ -100,6 +115,17 @@ export function FileProvider({ children }: { children: ReactNode }) {
 
       return remainingFiles;
     });
+    setTimeout(() => {
+      const remainingFiles = openFiles.filter((file) => file.name !== fileName);
+
+      if (remainingFiles.length > 0) {
+        const lastFile = remainingFiles[remainingFiles.length - 1];
+
+        navigate(`/file/${encodeURIComponent(lastFile.name)}`);
+      } else {
+        navigate("/");
+      }
+    }, 0);
   };
 
   const removeFile = (fileName: string) => {
@@ -114,6 +140,13 @@ export function FileProvider({ children }: { children: ReactNode }) {
         active: file.name === fileName,
       })),
     );
+    setTimeout(() => {
+      navigate(`/file/${encodeURIComponent(fileName)}`);
+    }, 0);
+  };
+
+  const closeAllFiles = () => {
+    setOpenFiles([]);
   };
 
   return (
@@ -127,6 +160,7 @@ export function FileProvider({ children }: { children: ReactNode }) {
         openFile,
         closeFile,
         setActiveFile,
+        closeAllFiles,
       }}
     >
       {children}

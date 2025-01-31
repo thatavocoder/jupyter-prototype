@@ -14,7 +14,7 @@ export default function DefaultLayout({ children }: DefaultLayoutProps) {
 
       <div className="flex-1 flex flex-col">
         <EditorTabs />
-        <div className="flex-1 bg-white dark:bg-gray-900 p-4 overflow-auto">
+        <div className="flex-1 bg-white dark:bg-gray-900 overflow-auto">
           {children}
         </div>
       </div>

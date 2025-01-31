@@ -13,6 +13,7 @@ import {
   setLocalStorageItem,
 } from "../utils/localStorageUtils";
 import { updateFileState, getRemainingFiles } from "../utils/fileOperations";
+import { CodeCell } from "../types";
 
 const FileContext = createContext<FileContextType | null>(null);
 
@@ -22,13 +23,23 @@ export function FileProvider({ children }: { children: ReactNode }) {
 
   const [allFiles, setAllFiles] = useState<CustomFile[]>(
     getLocalStorageItem("allFiles", [
-      { name: "notebook.ipynb" },
-      { name: "data.csv" },
+      {
+        name: "notebook.ipynb",
+        cells: [{ id: Date.now(), code: "", output: "" }],
+      },
+      {
+        name: "data.ipynb",
+        cells: [{ id: Date.now(), code: "", output: "" }],
+      },
     ]),
   );
   const [openFiles, setOpenFiles] = useState<CustomFile[]>(
     getLocalStorageItem("openFiles", [
-      { name: "notebook.ipynb", active: true },
+      {
+        name: "notebook.ipynb",
+        cells: [{ id: Date.now(), code: "", output: "" }],
+        active: true,
+      },
     ]),
   );
 
@@ -62,6 +73,33 @@ export function FileProvider({ children }: { children: ReactNode }) {
     setAllFiles((prev) => [...prev, file]);
   };
 
+  const updateFileCells = (fileName: string, updatedCells: CodeCell[]) => {
+    setAllFiles((prev) =>
+      prev.map((file) =>
+        file.name === fileName ? { ...file, cells: updatedCells } : file,
+      ),
+    );
+    setOpenFiles((prev) =>
+      prev.map((file) =>
+        file.name === fileName ? { ...file, cells: updatedCells } : file,
+      ),
+    );
+  };
+
+  const getFileCells = (fileName: string) => {
+    return allFiles.find((file) => file.name === fileName)?.cells || [];
+  };
+
+  const deleteFileCell = (fileName: string, cellId: number) => {
+    setAllFiles((prev) =>
+      prev.map((file) =>
+        file.name === fileName
+          ? { ...file, cells: file.cells.filter((cell) => cell.id !== cellId) }
+          : file,
+      ),
+    );
+  };
+
   const openFile = (fileName: string) => {
     setOpenFiles((prev) => {
       const isFileOpen = prev.some((file) => file.name === fileName);
@@ -69,7 +107,7 @@ export function FileProvider({ children }: { children: ReactNode }) {
 
       return isFileOpen
         ? updatedFiles
-        : [...updatedFiles, { name: fileName, active: true }];
+        : [...updatedFiles, { name: fileName, cells: [], active: true }];
     });
     updateNavigation(fileName);
   };
@@ -146,6 +184,9 @@ export function FileProvider({ children }: { children: ReactNode }) {
         setAllFiles,
         addFile,
         removeFile,
+        updateFileCells,
+        getFileCells,
+        deleteFileCell,
         openFile,
         closeFile,
         setActiveFile,

@@ -1,18 +1,22 @@
 import { useState } from "react";
+import { useParams } from "react-router-dom";
 
-import { CodeCell } from "@/types";
 import DefaultLayout from "@/layouts/default";
 import { executeCode, useStartKernel, useStartServer } from "@/api/jupyterApi";
 import Toolbar from "@/components/Toolbar";
 import CellList from "@/components/CellList";
+import { useFiles } from "@/context/FileContext";
 
 interface FilePageProps {}
 
 const FilePage = ({}: FilePageProps) => {
-  const [cells, setCells] = useState<CodeCell[]>([
-    { id: 1, code: "", output: "" },
-  ]);
+  const { updateFileCells, getFileCells } = useFiles();
+
   const [activeCellId, setActiveCellId] = useState<number | null>(null);
+
+  const fileName = useParams().name ?? "";
+
+  const cells = getFileCells(fileName);
 
   useStartServer();
   const { data: kernelData } = useStartKernel();
@@ -20,7 +24,7 @@ const FilePage = ({}: FilePageProps) => {
   const addCell = (index: number) => {
     const newCell = { id: Date.now(), code: "", output: "" };
 
-    setCells([
+    updateFileCells(fileName, [
       ...cells.slice(0, index + 1),
       newCell,
       ...cells.slice(index + 1),
@@ -37,8 +41,9 @@ const FilePage = ({}: FilePageProps) => {
   };
 
   const runAllCells = () => {
-    setCells(
-      cells.map((cell) => ({
+    updateFileCells(
+      fileName,
+      getFileCells(fileName).map((cell) => ({
         ...cell,
         output: `Output for: ${cell.code}`,
       })),
@@ -52,15 +57,12 @@ const FilePage = ({}: FilePageProps) => {
         addCell={addCell}
         runCode={runCode}
         runAllCells={runAllCells}
-        cells={cells}
       />
       <CellList
-        cells={cells}
         activeCellId={activeCellId}
         setActiveCellId={setActiveCellId}
         addCell={addCell}
         runCode={runCode}
-        setCells={setCells}
       />
     </DefaultLayout>
   );

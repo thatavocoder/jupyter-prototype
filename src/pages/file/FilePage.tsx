@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 
 import DefaultLayout from "@/layouts/default";
-import { executeCode, useStartKernel, useStartServer } from "@/api/jupyterApi";
-import Toolbar from "@/components/Toolbar";
-import CellList from "@/components/CellList";
+import Toolbar from "@/components/notebook/Toolbar";
+import CellList from "@/components/notebook/CellList";
 import { useFiles } from "@/context/FileContext";
+import { useStartServer } from "@/api/useStartServer";
+import { useStartKernel } from "@/api/useStartKernel";
+import { useExecuteCode } from "@/api/useExecuteCode.ts";
 
 interface FilePageProps {}
 
@@ -20,6 +22,18 @@ const FilePage = ({}: FilePageProps) => {
 
   useStartServer();
   const { data: kernelData } = useStartKernel();
+
+  const updateCellOutput = (cellId: number, output: string) => {
+    updateFileCells(
+      fileName,
+      cells.map((cell) => (cell.id === cellId ? { ...cell, output } : cell)),
+    );
+  };
+
+  const { executeCode } = useExecuteCode(
+    kernelData?.id ?? "",
+    updateCellOutput,
+  );
 
   const addCell = (index: number) => {
     const newCell = { id: Date.now(), code: "", output: "" };
@@ -37,7 +51,7 @@ const FilePage = ({}: FilePageProps) => {
 
     if (!cell || !kernelData) return;
 
-    executeCode(kernelData.id);
+    executeCode(cell.id, cell.code);
   };
 
   const runAllCells = () => {

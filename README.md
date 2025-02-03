@@ -8,43 +8,57 @@ This is a template for creating applications using Vite and HeroUI (v2).
 
 - [Vite](https://vitejs.dev/guide/)
 - [HeroUI](https://heroui.com)
-- [Tailwind CSS](https://tailwindcss.com)
-- [Tailwind Variants](https://tailwind-variants.org)
 - [TypeScript](https://www.typescriptlang.org)
-- [Framer Motion](https://www.framer.com/motion)
 
-## How to Use
+## Running the Project
 
-To clone the project, run the following command:
+1. Clone the JupyterHub deployment:
 
-```bash
-git clone https://github.com/frontio-ai/vite-template.git
-```
+   ```bash
+   git clone https://github.com/jupyterhub/jupyterhub-deploy-docker.git
+   ```
 
-### Install dependencies
+2. Add the following lines to `jupyterhub_config.py`:
 
-You can use one of them `npm`, `yarn`, `pnpm`, `bun`, Example using `npm`:
+   ```python
+   c.Spawner.args = [
+       f"--NotebookApp.allow_origin=http://localhost:5173",
+   ]
 
-```bash
-npm install
-```
+   c.JupyterHub.tornado_settings = {
+       "headers": {
+           "Access-Control-Allow-Origin": "http://localhost:5173",
+       },
+       "ws_max_message_size": 104857600,
+   }
+   ```
 
-### Run the development server
+3. Run the Docker Compose setup:
 
-```bash
-npm run dev
-```
+   ```bash
+   docker compose up
+   ```
 
-### Setup pnpm (optional)
+4. Open your browser and navigate to `http://localhost:8000/hub/token` and click on "Request new API token". Once the token is generated, copy it and save it somewhere.
 
-If you are using `pnpm`, you need to add the following code to your `.npmrc` file:
+5. Clone the repository for the frontend:
 
-```bash
-public-hoist-pattern[]=*@heroui/*
-```
+   ```bash
+   git clone https://github.com/thatavocoder/jupyter-prototype
+   ```
 
-After modifying the `.npmrc` file, you need to run `pnpm install` again to ensure that the dependencies are installed correctly.
+6. Install the node modules using `yarn`:
 
-## License
+   ```bash
+   yarn
+   ```
 
-Licensed under the [MIT license](https://github.com/frontio-ai/vite-template/blob/main/LICENSE).
+7. Create a `.env` file with the environment variables that are in `.env.example`, and use the token that we copied above here.
+
+8. Start the development server:
+
+   ```bash
+   yarn run dev
+   ```
+
+9. Open your browser and navigate to `http://localhost:5173/` to use the application.
